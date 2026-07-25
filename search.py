@@ -5,27 +5,21 @@ def gap_sum(v1, v2): #v1 is the query and v2. is the item the v1 and v2 stuff ar
         total += gap
     return total 
 
-#test
+def search(query,catalog, k=3):
+    result = [] #the scores go here
+    for item in catalog: # goes to each catalog entry
+        name = item[0] # pull out the item name so item[0] is the slot name
+        vector = item[1] # this puls out the vector slot
+        gap = gap_sum(query, vector)
+        result.append((name, gap))
+    ranked = sorted(result, key = lambda pair:pair[1]) #this is ouput
+    return ranked[:k]
+
 
 query = [0.85, 0.9, 0.05]
-tee_a = [0.9, 0.8, 0.1]
-tee_b = [0.8, 0.9, 0.1]
-
-print(gap_sum(query, tee_a))
-print(gap_sum(query, tee_b))
-
 catalog = [
     ("tee A" , [0.9,0.8, 0.1]), 
     ("tee b", [0.8,  0.9, 0.1]),
     ("gown", [0.1, 0.8, 0.9]),
 ]
-
-result = [] #the scores go here
-for item in catalog: # goes to each catalog entry
-    name = item[0] # pull out the item name so item[0] is the slot name
-    vector = item[1] # this puls out the vector slot
-    gap = gap_sum(query, vector)
-    result.append((name, gap))
-    ranked = sorted(result, key = lambda pair:pair[1])
-    
-print(ranked)
+print(search(query, catalog, k = 1))
