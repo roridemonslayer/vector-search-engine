@@ -13,16 +13,24 @@ def dot(v1, v2):
     return walk
 
 def magnitude(v):
-    
+    total = 0 
+    for i in range(len(v)):
+        total += ((v[i] * v[i]))
+    return total ** 0.5
+
+def cosine(v1,v2):
+    return dot(v1, v2) / (magnitude(v1) * magnitude(v2))
+
+
 
 def search(query,catalog, k=3):
     result = [] #the scores go here
     for item in catalog: # goes to each catalog entry
         name = item[0] # pull out the item name so item[0] is the slot name
         vector = item[1] # this puls out the vector slot
-        gap = gap_sum(query, vector)
+        gap = cosine(query, vector)
         result.append((name, gap))
-    ranked = sorted(result, key = lambda pair:pair[1]) #this is ouput
+    ranked = sorted(result, key = lambda pair:pair[1], reverse = True) #this is ouput
     return ranked[:k]
 
 
@@ -33,3 +41,5 @@ catalog = [
     ("gown", [0.1, 0.8, 0.9]),
 ]
 print(search(query, catalog, k = 1))
+
+
