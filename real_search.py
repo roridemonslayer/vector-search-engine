@@ -20,5 +20,13 @@ for t in texts:
     vector = model.encode(t) # getting the vector decimeals from the t 
     catalog.append((t, vector))
 
-query = model.encode("cozy fall outfit")
-print(search(query, catalog, k=2))
+queries = [
+    "warm knitwear for cold weather",
+    "shoes for rough trails",
+    "something for a rainy hike",
+]
+
+for q in queries:
+    query = model.encode(q)
+    result = search(query, catalog, k=2)
+    print(q, "→", result)
