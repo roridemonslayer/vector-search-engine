@@ -18,6 +18,11 @@ def assign_layer():
     return layer
 
 
+layers = {}
+for node in graph:
+    layers[node] = assign_layer()
+
+
 def greedy_search(graph, query, start = "1"): #the start of our function 
     current = start #where we're starting out rn 
     while True: #keep hopping with till we have a return statement
@@ -60,7 +65,7 @@ print(greedy_search(graph, query, start="1"))
 for i in range(20):
     print(assign_layer())
 
-
+print(layers)
 
 
 
