@@ -1,4 +1,5 @@
 from search import cosine
+import random
 
 graph = {
     "1": {"vector": [1, 8], "neighbors": ["2", "4"]},
@@ -8,6 +9,14 @@ graph = {
     "5": {"vector": [7, 1], "neighbors": ["6"]},
     "6": {"vector": [8, 2], "neighbors": ["2", "5"]},
 }
+
+def assign_layer():
+    layer  = 0 #starts at layer 0 
+
+    while random.random() < 0.5: #50% chance to keep climbing 
+        layer+=1 #go up one more interval
+    return layer
+
 
 def greedy_search(graph, query, start = "1"): #the start of our function 
     current = start #where we're starting out rn 
@@ -48,6 +57,8 @@ def greedy_search(graph, query, start = "1"): #the start of our function
 
 query = [7,1]      # sits right on top of node 3's vector
 print(greedy_search(graph, query, start="1"))
+for i in range(20):
+    print(assign_layer())
 
 
 
