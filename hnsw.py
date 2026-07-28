@@ -20,7 +20,16 @@ def assign_layer():
 
 layers = {}
 for node in graph:
-    layers[node] = assign_layer()
+    layers[node] = assign_layer() 
+
+def neighbors_at_layer(node, layer_num, layers):
+    all_neighbors = graph[node]["neighbors"]
+    valid = []
+    for n in all_neighbors:
+        if layers[n]>= layer_num:
+            valid.append(n)
+    return valid
+
 
 
 def greedy_search(graph, query, start = "1"): #the start of our function 
@@ -60,13 +69,41 @@ def greedy_search(graph, query, start = "1"): #the start of our function
 
         current = best_neighbor
 
+def layered_search(graph, query, layers, start = "1"):
+    top_layer = max(layers.values()) # find the highest floor that exists in our building
+    current = start #where we're standing at right no w
+    current_layer = top_layer #the room we;re searching for
+    while current_layer >= 0: #this keeps the search going as long as theres a floor left to check 
+        while True: #this inner loiop is the actual hop, 
+            current_vector = graph[current]["vector"] #the current spots location
+            current_score = cosine(query,current_vector)# how close we are the query righ tnow 
+
+            best_neighbor = None #the floor nobody has beatedn us yet on 
+            best_score = current_score# score to bea t= our own score
+
+            for neighbor in neighbors_at_layer(current, current_layer, layers): #only looks at the neigh who are allowed on thsi spseicf c floor
+                neighbor_vector = graph[neighbor]["vector"] #the neighbors location 
+                neighbor_score = cosine(query, neighbor_vector) #how close they are to the query
+
+                if neighbor_score > best_score: #did this neighbor beat oru curren t best one 
+                    best_score = neighbor_score #update the score
+                    best_neighbor = neighbor #remeber who won
+            if best_neighbor is None: #if no one on the floor was close than us
+                break #stop hooping on the floor and go check downstairs
+            current = best_neighbor #someone was closer keep hoping htere
+        current_layer -= 1# doen with htusi floor go doen oner lleve
+    return current
+
+
 query = [7,1]      # sits right on top of node 3's vector
 print(greedy_search(graph, query, start="1"))
 for i in range(20):
     print(assign_layer())
 
+
 print(layers)
 
-
+query = [4, 8]
+print(layered_search(graph, query, layers, start="1"))
 
 
