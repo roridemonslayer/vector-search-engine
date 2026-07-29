@@ -94,7 +94,10 @@ def layered_search(graph, query, layers, start = "1"):
         current_layer -= 1# doen with htusi floor go doen oner lleve
     return current
 
+
 def insert(graph, layers, name, vector, k = 2): 
+    node_layer = assign_layer()
+
 
 
 query = [7,1]      # sits right on top of node 3's vector
