@@ -1,5 +1,6 @@
 from search import cosine
 from search import search
+import pickle
 import random
 
 graph = {
@@ -23,7 +24,7 @@ layers = {}
 for node in graph:
     layers[node] = assign_layer() 
 
-def neighbors_at_layer(node, layer_num, layers):
+def neighbors_at_layer(node, layer_num, layers, graph ):
     all_neighbors = graph[node]["neighbors"]
     valid = []
     for n in all_neighbors:
@@ -82,7 +83,7 @@ def layered_search(graph, query, layers, start = "1"):
             best_neighbor = None #the floor nobody has beatedn us yet on 
             best_score = current_score# score to bea t= our own score
 
-            for neighbor in neighbors_at_layer(current, current_layer, layers): #only looks at the neigh who are allowed on thsi spseicf c floor
+            for neighbor in neighbors_at_layer(current, current_layer, layers, graph): #only looks at the neigh who are allowed on thsi spseicf c floor
                 neighbor_vector = graph[neighbor]["vector"] #the neighbors location 
                 neighbor_score = cosine(query, neighbor_vector) #how close they are to the query
 
@@ -135,7 +136,15 @@ def insert(graph, layers, name, vector, k = 2):
         
         
         '''
+def save_index(graph, layers,filepath):
+    data = {"graph":graph, "layers" :layers}
+    with open(filepath, "wb") as f:
+        pickle.dump(data, f) 
 
+def load_index(filepath):
+    with open(filepath, "rb") as f:
+        data = pickle.load(f)
+    return data["graph"], data["layers"]
 
 query = [7,1]      # sits right on top of node 3's vector
 print(greedy_search(graph, query, start="1"))
@@ -158,3 +167,9 @@ insert(new_graph, new_layers, "c", [4, 8])
 print(new_graph)
 
 
+
+save_index(new_graph, new_layers, "test_index.pkl")
+
+loaded_graph, loaded_layers = load_index("test_index.pkl")
+print(loaded_graph == new_graph)      # should print True
+print(loaded_layers == new_layers)    # should print True
