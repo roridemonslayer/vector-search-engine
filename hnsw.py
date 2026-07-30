@@ -1,4 +1,5 @@
 from search import cosine
+from search import search
 import random
 
 graph = {
@@ -96,8 +97,44 @@ def layered_search(graph, query, layers, start = "1"):
 
 
 def insert(graph, layers, name, vector, k = 2): 
+    #this gives the new node a random layer
     node_layer = assign_layer()
+    layers[name] = node_layer
 
+    #add hte node to the graph with an empty neighbor list 
+    graph[name] =  {"vector": vector, "neighbors":[]}
+
+    #this is a special case . if thi sis the first node, then theres nothign to search 
+    if len(graph) == 1:
+        return
+
+    #search() expects a list of (name, vector) pairs — same shape as unit 4's catalog
+    catalog = []
+    for existing_name in graph:
+        if existing_name != name:
+            existing_vector = graph[existing_name]["vector"]
+            catalog.append((existing_name, existing_vector))
+
+    #finds the k closet  existing nodes using the  search()
+    closest = search(vector, catalog, k = k)
+    # closest looks like: [("3", 0.91), ("6", 0.75)], (name, score) pairs
+
+    #connect both directions  for each lose match 
+    for match_name , score in closest:
+        graph[name]["neighbors"].append(match_name) 
+        graph[match_name]["neighbors"].append(name)
+
+        '''
+        the system as follows 
+        Roll the layer lottery for the new node (same as before)
+        Add it to the graph, no neighbors yet
+        If it's the very first node, stop — nothing to connect to
+        Otherwise, gather everyone ELSE already in the graph into a (name, vector) list
+        Use your OWN search() (the cosine one from search.py) to find the k closest among them
+        For each match, wire the connection BOTH ways
+        
+        
+        '''
 
 
 query = [7,1]      # sits right on top of node 3's vector
@@ -110,5 +147,14 @@ print(layers)
 
 query = [4, 8]
 print(layered_search(graph, query, layers, start="1"))
+
+new_graph = {}
+new_layers = {}
+
+insert(new_graph, new_layers, "a", [1, 8])
+insert(new_graph, new_layers, "b", [3, 7])
+insert(new_graph, new_layers, "c", [4, 8])
+
+print(new_graph)
 
 
