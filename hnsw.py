@@ -71,14 +71,16 @@ def greedy_search(graph, query, start = "1"): #the start of our function
 
         current = best_neighbor
 
-def layered_search(graph, query, layers, start = "1"):
+def layered_search(graph, query, layers, start = "1", k = 5):
     top_layer = max(layers.values()) # find the highest floor that exists in our building
     current = start #where we're standing at right no w
     current_layer = top_layer #the room we;re searching for
+    visited_scores = {} #every node we've looked at 
     while current_layer >= 0: #this keeps the search going as long as theres a floor left to check 
         while True: #this inner loiop is the actual hop, 
             current_vector = graph[current]["vector"] #the current spots location
             current_score = cosine(query,current_vector)# how close we are the query righ tnow 
+            visited_scores[current] = current_score
 
             best_neighbor = None #the floor nobody has beatedn us yet on 
             best_score = current_score# score to bea t= our own score
@@ -94,7 +96,8 @@ def layered_search(graph, query, layers, start = "1"):
                 break #stop hooping on the floor and go check downstairs
             current = best_neighbor #someone was closer keep hoping htere
         current_layer -= 1# doen with htusi floor go doen oner lleve
-    return current
+    ranked = sorted(visited_scores.items(),  key=lambda pair: pair[1], reverse=True)
+    return ranked[:k]
 
 
 def insert(graph, layers, name, vector, k = 2): 
