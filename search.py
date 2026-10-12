@@ -34,12 +34,15 @@ def search(query,catalog, k=3):
     return ranked[:k]
 
 
-query = [0.85, 0.9, 0.05]
-catalog = [
-    ("tee A" , [0.9,0.8, 0.1]), 
-    ("tee b", [0.8,  0.9, 0.1]),
-    ("gown", [0.1, 0.8, 0.9]),
-]
-print(search(query, catalog, k = 1))
+# the demo only runs when this file is run directly (python search.py),
+# not when another file does "from search import cosine"
+if __name__ == "__main__":
+    query = [0.85, 0.9, 0.05]
+    catalog = [
+        ("tee A" , [0.9,0.8, 0.1]), 
+        ("tee b", [0.8,  0.9, 0.1]),
+        ("gown", [0.1, 0.8, 0.9]),
+    ]
+    print(search(query, catalog, k = 1))
 
 
