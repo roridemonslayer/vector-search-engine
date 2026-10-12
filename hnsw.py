@@ -149,30 +149,33 @@ def load_index(filepath):
         data = pickle.load(f)
     return data["graph"], data["layers"]
 
-query = [7,1]      # sits right on top of node 3's vector
-print(greedy_search(graph, query, start="1"))
-for i in range(20):
-    print(assign_layer())
+# the demo only runs when this file is run directly (python hnsw.py).
+# before this guard, just importing hnsw printed everything and rewrote test_index.pkl
+if __name__ == "__main__":
+    query = [7,1]      # sits right on top of node 3's vector
+    print(greedy_search(graph, query, start="1"))
+    for i in range(20):
+        print(assign_layer())
 
 
-print(layers)
+    print(layers)
 
-query = [4, 8]
-print(layered_search(graph, query, layers, start="1"))
+    query = [4, 8]
+    print(layered_search(graph, query, layers, start="1"))
 
-new_graph = {}
-new_layers = {}
+    new_graph = {}
+    new_layers = {}
 
-insert(new_graph, new_layers, "a", [1, 8])
-insert(new_graph, new_layers, "b", [3, 7])
-insert(new_graph, new_layers, "c", [4, 8])
+    insert(new_graph, new_layers, "a", [1, 8])
+    insert(new_graph, new_layers, "b", [3, 7])
+    insert(new_graph, new_layers, "c", [4, 8])
 
-print(new_graph)
+    print(new_graph)
 
 
 
-save_index(new_graph, new_layers, "test_index.pkl")
+    save_index(new_graph, new_layers, "test_index.pkl")
 
-loaded_graph, loaded_layers = load_index("test_index.pkl")
-print(loaded_graph == new_graph)      # should print True
-print(loaded_layers == new_layers)    # should print True
+    loaded_graph, loaded_layers = load_index("test_index.pkl")
+    print(loaded_graph == new_graph)      # should print True
+    print(loaded_layers == new_layers)    # should print True
