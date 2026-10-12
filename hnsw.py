@@ -1,5 +1,6 @@
 from search import cosine
 from search import search
+import heapq
 import pickle
 import random
 
@@ -71,24 +72,55 @@ def greedy_search(graph, query, start = "1"): #the start of our function
 
         current = best_neighbor
 
-def layered_search(graph, query, layers, start = "1", k = 5):
+def search_layer(graph, query, entry_points, ef, layer_num, layers):
+    # this is the "beam" version of greedy_search, the way the original HNSW paper does it.
+    # greedy_search follows ONE path and stops at the first dead end.
+    # here we keep the ef best nodes we've seen so far and keep exploring from all of them,
+    # so one bad turn early on doesn't decide the whole answer.
+
+    visited = set(entry_points)
+    # candidates = nodes we still need to explore from (a heap, best first)
+    # found = the ef best nodes so far (a heap, worst first, so the worst is easy to kick out)
+    candidates = []
+    found = []
+    for node in entry_points:
+        score = cosine(query, graph[node]["vector"])
+        heapq.heappush(candidates, (-score, node))  # minus because heapq pops the smallest first
+        heapq.heappush(found, (score, node))
+
+    while candidates:
+        neg_score, node = heapq.heappop(candidates)
+        worst_found = found[0][0]
+        # if the best thing left to explore is already worse than everything we kept, we're done
+        if -neg_score < worst_found and len(found) >= ef:
+            break
+        for neighbor in neighbors_at_layer(node, layer_num, layers, graph):
+            if neighbor in visited:
+                continue
+            visited.add(neighbor)
+            score = cosine(query, graph[neighbor]["vector"])
+            if len(found) < ef or score > found[0][0]:
+                heapq.heappush(candidates, (-score, neighbor))
+                heapq.heappush(found, (score, neighbor))
+                if len(found) > ef:
+                    heapq.heappop(found)  # drop the worst so we only ever keep ef
+
+    return sorted(((node, score) for score, node in found), key=lambda pair: pair[1], reverse=True)
+
+
+def layered_search(graph, query, layers, start = "1", k = 5, ef = 50):
     top_layer = max(layers.values()) # find the highest floor that exists in our building
     current = start #where we're standing at right no w
     current_layer = top_layer #the room we;re searching for
-    visited_scores = {} #every node we've looked at 
-    while current_layer >= 0: #this keeps the search going as long as theres a floor left to check 
-        while True: #this inner loiop is the actual hop, 
-            current_vector = graph[current]["vector"] #the current spots location
-            current_score = cosine(query,current_vector)# how close we are the query righ tnow 
-            visited_scores[current] = current_score
 
+    # upper floors: same greedy hopping as before, just to land somewhere close to the query fast
+    while current_layer > 0:
+        while True: #this inner loiop is the actual hop, 
+            current_score = cosine(query, graph[current]["vector"])# how close we are the query righ tnow 
             best_neighbor = None #the floor nobody has beatedn us yet on 
             best_score = current_score# score to bea t= our own score
-
             for neighbor in neighbors_at_layer(current, current_layer, layers, graph): #only looks at the neigh who are allowed on thsi spseicf c floor
-                neighbor_vector = graph[neighbor]["vector"] #the neighbors location 
-                neighbor_score = cosine(query, neighbor_vector) #how close they are to the query
-
+                neighbor_score = cosine(query, graph[neighbor]["vector"]) #how close they are to the query
                 if neighbor_score > best_score: #did this neighbor beat oru curren t best one 
                     best_score = neighbor_score #update the score
                     best_neighbor = neighbor #remeber who won
@@ -96,49 +128,57 @@ def layered_search(graph, query, layers, start = "1", k = 5):
                 break #stop hooping on the floor and go check downstairs
             current = best_neighbor #someone was closer keep hoping htere
         current_layer -= 1# doen with htusi floor go doen oner lleve
-    ranked = sorted(visited_scores.items(),  key=lambda pair: pair[1], reverse=True)
-    return ranked[:k]
+
+    # ground floor: the beam search. this is where the actual top k comes from.
+    # before this, the answer was only the handful of nodes on one greedy path,
+    # which is why recall was so low.
+    return search_layer(graph, query, [current], max(ef, k), 0, layers)[:k]
 
 
-def insert(graph, layers, name, vector, k = 2): 
+def insert(graph, layers, name, vector, k = 8, ef_construction = 40, max_neighbors = 16):
+    # k = how many neighbors a new node links to (the paper calls this M)
+    # ef_construction = how wide the beam is while looking for those neighbors
+    # max_neighbors = the most links any node keeps. without a cap, popular nodes
+    # end up with hundreds of links and every search slows down.
+
     #this gives the new node a random layer
     node_layer = assign_layer()
-    layers[name] = node_layer
-
-    #add hte node to the graph with an empty neighbor list 
-    graph[name] =  {"vector": vector, "neighbors":[]}
 
     #this is a special case . if thi sis the first node, then theres nothign to search 
-    if len(graph) == 1:
+    if not graph:
+        layers[name] = node_layer
+        graph[name] = {"vector": vector, "neighbors": []}
         return
 
-    #search() expects a list of (name, vector) pairs — same shape as unit 4's catalog
-    catalog = []
-    for existing_name in graph:
-        if existing_name != name:
-            existing_vector = graph[existing_name]["vector"]
-            catalog.append((existing_name, existing_vector))
+    # small graphs: just check everyone (same as the old version, using our own search())
+    if len(graph) <= ef_construction:
+        catalog = [(existing, graph[existing]["vector"]) for existing in graph]
+        closest = search(vector, catalog, k = k)
+    else:
+        # bigger graphs: find the neighbors with the graph's OWN search instead of checking
+        # every node. this is what makes building the index fast at scale.
+        entry = max(layers, key = layers.get)  # start from the node on the highest floor
+        closest = layered_search(graph, vector, layers, start = entry, k = k, ef = ef_construction)
 
-    #finds the k closet  existing nodes using the  search()
-    closest = search(vector, catalog, k = k)
-    # closest looks like: [("3", 0.91), ("6", 0.75)], (name, score) pairs
+    layers[name] = node_layer
+    graph[name] = {"vector": vector, "neighbors": []}
 
     #connect both directions  for each lose match 
-    for match_name , score in closest:
-        graph[name]["neighbors"].append(match_name) 
+    for match_name, score in closest:
+        graph[name]["neighbors"].append(match_name)
         graph[match_name]["neighbors"].append(name)
+        # if that neighbor now has too many links, keep only its closest ones
+        if len(graph[match_name]["neighbors"]) > max_neighbors:
+            prune(graph, match_name, max_neighbors)
 
-        '''
-        the system as follows 
-        Roll the layer lottery for the new node (same as before)
-        Add it to the graph, no neighbors yet
-        If it's the very first node, stop — nothing to connect to
-        Otherwise, gather everyone ELSE already in the graph into a (name, vector) list
-        Use your OWN search() (the cosine one from search.py) to find the k closest among them
-        For each match, wire the connection BOTH ways
-        
-        
-        '''
+
+def prune(graph, node, max_neighbors):
+    # keep the max_neighbors links that point to the most similar nodes
+    vector = graph[node]["vector"]
+    ranked = sorted(graph[node]["neighbors"], key = lambda other: cosine(vector, graph[other]["vector"]), reverse = True)
+    graph[node]["neighbors"] = ranked[:max_neighbors]
+
+
 def save_index(graph, layers,filepath):
     data = {"graph":graph, "layers" :layers}
     with open(filepath, "wb") as f:
